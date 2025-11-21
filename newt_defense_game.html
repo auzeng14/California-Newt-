@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>California Newt Defense Game</title>
+  <style>
+    :root { --bg:#111; --panel:#222; --accent:#ffa500; --muted:#bbb }
+    body {
+      font-family: Arial, Helvetica, sans-serif;
+      background: var(--bg);
+      color: #fff;
+      margin: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 12px;
+      padding: 18px;
+      min-height: 100vh;
+      box-sizing: border-box;
+    }
+    .hidden { display: none; }
+    h1 { margin: 6px 0 }
+    .panel {
+      background: var(--panel);
+      border: 3px solid var(--accent);
+      padding: 12px;
+      border-radius: 8px;
+      width: 100%;
+      max-width: 760px;
+      box-sizing: border-box;
+    }
+    #hud { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px }
+    #hud div { font-size: 1rem }
+    canvas {
+      background:#2b2b2b;
+      display:block;
+      margin:0 auto;
+      border-radius:6px;
+      width:100%;
+      max-width:760px;
+      height:420px;
+    }
+    #gameOverScreen {
+      text-align:center;
+      margin-top:16px;
+      background:#0008;
+      padding:12px;
+      border-radius:8px;
+      border:2px solid var(--accent);
+    }
+    button {
+      background:var(--accent);
+      border:none;
+      padding:8px 12px;
+      border-radius:6px;
+      color:#000;
+      font-weight:700;
+      cursor:pointer;
+    }
+  </style>
+</head>
+<body>
+  <h1>California Newt Defense</h1>
+
+  <div class="panel">
+    <div id="hud">
+      <div id="hp">HP: 3</div>
+      <div id="score">Score: 0</div>
+      <div id="cool">Toxin Ready</div>
+    </div>
+
+    <canvas id="game" width="760" height="420"></canvas>
+
+    <div id="gameOverScreen" class="hidden">
+      <h2>Game Over</h2>
+      <p id="finalScore">Final Score: 0</p>
+      <button id="restartBtn">Restart</button>
+    </div>
+  </div>
+
+<script>
+const canvas = document.getElementById('game');
+const ctx = canvas.getContext('2d');
+
+function resizeCanvasToDisplaySize(){
+  const rect = canvas.getBoundingClientRect();
+  canvas.width = Math.min(760, Math.floor(rect.width));
+  canvas.height = Math.floor(rect.height);
+}
+resizeCanvasToDisplaySize();
+
+const hpText = document.getElementById('hp');
+const scoreText = document.getElementById('score');
+const coolText = document.getElementById('cool');
+const gameOverScreen = document.getElementById('gameOverScreen');
+const finalScoreText = document.getElementById('finalScore');
+const restartBtn = document.getElementById('restartBtn');
+
+const player = {
+  x: canvas.width/2,
+  y: canvas.height/2,
+  size: 16,
+  speed: 3.2,
+  toxic:false,
+  cooldown:0
+};
+
+let predators=[];
+let spawnTimer=0;
+let keys={};
+let hp=3;
+let score=0;
+let running=true;
+
+window.addEventListener('keydown',e=>{keys[e.key]=true;});
+window.addEventListener('keyup',e=>{keys[e.key]=false;});
+
+function spawnPredator(){
+  const left = Math.random()<0.5;
+  predators.push({
+    x:left?-20:canvas.width+20,
+    y:Math.random()*(canvas.height-40)+20,
+    size:12+Math.random()*6,
+    speed:1+Math.random()*1.2
+  });
+}
+
+function resetGame(){
+  predators=[];
+  spawnTimer=60;
+  hp=3;
+  score=0;
+  player.x=canvas.width/2;
+  player.y=canvas.height/2;
+  player.toxic=false;
+  player.cooldown=0;
+  running=true;
+
+  hpText.textContent="HP: 3";
+  scoreText.textContent="Score: 0";
+  coolText.textContent="Toxin Ready";
+
+  gameOverScreen.classList.add('hidden');
+  gameLoop();
+}
+
+function gameOver(){
+  running=false;
+  finalScoreText.textContent = "Final Score: " + score;
+  gameOverScreen.classList.remove('hidden');
+}
+
+function updatePlayer(){
+  if(keys['ArrowUp']) player.y-=player.speed;
+  if(keys['ArrowDown']) player.y+=player.speed;
+  if(keys['ArrowLeft']) player.x-=player.speed;
+  if(keys['ArrowRight']) player.x+=player.speed;
+
+  player.x=Math.max(player.size,Math.min(canvas.width-player.size,player.x));
+  player.y=Math.max(player.size,Math.min(canvas.height-player.size,player.y));
+
+  if(keys[' '] && player.cooldown<=0){
+    player.toxic=true;
+    player.cooldown=300;
+    setTimeout(()=>player.toxic=false,1500);
+  }
+  if(player.cooldown>0) player.cooldown--;
+
+  coolText.textContent = player.cooldown<=0 ? "Toxin Ready" : "Cooldown: "+Math.ceil(player.cooldown/60)+"s";
+}
+
+function updatePredators(){
+  for(let i=predators.length-1;i>=0;i--){
+    let p=predators[i];
+
+    const dx=player.x-p.x;
+    const dy=player.y-p.y;
+    const dist=Math.hypot(dx,dy)||1;
+
+    p.x += (dx/dist)*p.speed;
+    p.y += (dy/dist)*p.speed;
+
+    if(dist < player.size + p.size - 2){
+      if(player.toxic){
+        predators.splice(i,1);
+        score++;
+        scoreText.textContent="Score: "+score;
+      } else {
+        hp--;
+        hpText.textContent="HP: "+hp;
+        predators.splice(i,1);
+        if(hp<=0){ gameOver(); return; }
+      }
+      continue;
+    }
+
+    if(p.x<-100 || p.x>canvas.width+100 || p.y<-100 || p.y>canvas.height+100){
+      predators.splice(i,1);
+      score++;
+      scoreText.textContent="Score: "+score;
+    }
+  }
+}
+
+function draw(){
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+
+  ctx.fillStyle="#2b2b2b";
+  ctx.fillRect(0,0,canvas.width,canvas.height);
+
+  predators.forEach(p=>{
+    ctx.beginPath();
+    ctx.fillStyle="#e74c3c";
+    ctx.arc(p.x,p.y,p.size,0,Math.PI*2);
+    ctx.fill();
+  });
+
+  ctx.beginPath();
+  ctx.fillStyle = player.toxic?"#ff9a00":"#ffd24d";
+  ctx.ellipse(player.x,player.y,player.size*1.6,player.size,0,0,Math.PI*2);
+  ctx.fill();
+}
+
+function gameLoop(){
+  if(!running) return;
+  updatePlayer();
+
+  if(spawnTimer<=0){
+    spawnPredator();
+    spawnTimer=90-Math.min(60,Math.floor(score/3));
+  }
+  spawnTimer--;
+
+  updatePredators();
+  draw();
+  requestAnimationFrame(gameLoop);
+}
+
+restartBtn.addEventListener('click', resetGame);
+
+resetGame();
+
+window.addEventListener('resize',()=>{
+  resizeCanvasToDisplaySize();
+});
+</script>
+
+</body>
+</html>
