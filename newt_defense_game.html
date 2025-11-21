@@ -6,6 +6,62 @@
   <title>California Newt Defense Game</title>
   <style>
     :root { --bg:#111; --panel:#222; --accent:#ffa500; --muted:#bbb }
+    /* Instructions Panel */
+}
+
+
+#scoreDisplay {
+margin-top: 10px;
+font-size: 20px;
+font-weight: bold;
+}
+
+
+#restartBtn {
+margin-top: 10px;
+padding: 10px 20px;
+background: #ffb347;
+border: none;
+border-radius: 6px;
+cursor: pointer;
+font-size: 18px;
+display: none;
+}
+</style>
+</head>
+<body>
+
+
+<div id="instructions">
+<h1>California Newt Dash</h1>
+<p><strong>Goal:</strong> Move your newt to collect bugs while avoiding predators.</p>
+
+
+<h3>Controls</h3>
+<p>Use your keyboard to move:</p>
+<ul>
+<li><strong>W</strong> = Up</li>
+<li><strong>A</strong> = Left</li>
+<li><strong>S</strong> = Down</li>
+<li><strong>D</strong> = Right</li>
+</ul>
+
+
+<h3>Scoring</h3>
+<p>Each bug is worth <strong>1 point</strong>.</p>
+<p>Avoid predators — touching one ends the game!</p>
+
+
+<h3>Restarting</h3>
+<p>When the game ends, press the <strong>Restart</strong> button to try again.</p>
+</div>
+
+
+<div id="gameContainer">
+<canvas id="gameCanvas" width="500" height="500"></canvas>
+<div id="scoreDisplay">Score: 0</div>
+<button id="restartBtn">Restart</button>
+</div>
     body {
       font-family: Arial, Helvetica, sans-serif;
       background: var(--bg);
